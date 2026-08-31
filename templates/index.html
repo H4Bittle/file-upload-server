@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drop</title>
+<style>
+  :root{
+    --bg:#14181f;
+    --panel:#1b212b;
+    --panel-hover:#212836;
+    --border:#2a3140;
+    --text:#e7eaee;
+    --text-muted:#8b93a3;
+    --accent:#e8a33d;
+    --accent-dim:#3a2f1c;
+    --danger:#d9636b;
+    --danger-dim:#3a2225;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  main{
+    max-width:680px;
+    margin:0 auto;
+    padding:56px 24px 80px;
+  }
+  h1{
+    font-size:20px;
+    font-weight:600;
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  p.sub{
+    color:var(--text-muted);
+    font-size:14px;
+    margin:0 0 32px;
+  }
+
+  #dropzone{
+    border:1.5px dashed var(--border);
+    border-radius:var(--radius);
+    background:var(--panel);
+    padding:48px 24px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  #dropzone:hover{ background:var(--panel-hover); }
+  #dropzone.dragover{
+    border-color:var(--accent);
+    background:var(--accent-dim);
+  }
+  #dropzone .zone-title{
+    font-size:15px;
+    font-weight:500;
+    margin-bottom:4px;
+  }
+  #dropzone .zone-sub{
+    font-size:13px;
+    color:var(--text-muted);
+  }
+  #fileInput{ display:none; }
+
+  #progressWrap{
+    margin-top:16px;
+    display:none;
+  }
+  #progressWrap.active{ display:block; }
+  #progressLabel{
+    font-size:13px;
+    color:var(--text-muted);
+    margin-bottom:6px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  #progressBar{
+    height:4px;
+    background:var(--border);
+    border-radius:2px;
+    overflow:hidden;
+  }
+  #progressFill{
+    height:100%;
+    width:0%;
+    background:var(--accent);
+    transition:width .1s linear;
+  }
+  #uploadError{
+    display:none;
+    margin-top:12px;
+    font-size:13px;
+    color:var(--danger);
+  }
+
+  h2{
+    font-size:13px;
+    font-weight:600;
+    color:var(--text-muted);
+    text-transform:none;
+    margin:40px 0 12px;
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+  }
+  td{
+    padding:11px 4px;
+    border-bottom:1px solid var(--border);
+    font-size:14px;
+    vertical-align:middle;
+  }
+  tr:last-child td{ border-bottom:none; }
+  td.fname{
+    max-width:0;
+    width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  td.fmeta{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:12px;
+    color:var(--text-muted);
+    white-space:nowrap;
+    text-align:right;
+    padding-left:16px;
+  }
+  td.factions{
+    white-space:nowrap;
+    text-align:right;
+    padding-left:12px;
+  }
+  a.dl, button.del{
+    font-size:12px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    text-decoration:none;
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:5px 9px;
+    background:transparent;
+    cursor:pointer;
+  }
+  a.dl{ color:var(--text); margin-right:6px; }
+  a.dl:hover{ border-color:var(--accent); color:var(--accent); }
+  button.del{ color:var(--danger); }
+  button.del:hover{ background:var(--danger-dim); border-color:var(--danger); }
+
+  .empty{
+    color:var(--text-muted);
+    font-size:13px;
+    padding:20px 4px;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Drop</h1>
+  <p class="sub">Files land in the uploads folder on the server. Nothing is scanned or filtered.</p>
+
+  <div id="dropzone">
+    <div class="zone-title">Drag files here, or click to choose</div>
+    <div class="zone-sub">Any file type &middot; multiple files at once</div>
+    <input type="file" id="fileInput" multiple>
+  </div>
+
+  <div id="progressWrap">
+    <div id="progressLabel">uploading&hellip;</div>
+    <div id="progressBar"><div id="progressFill"></div></div>
+  </div>
+  <div id="uploadError"></div>
+
+  <h2>{{ files|length }} file{{ 's' if files|length != 1 else '' }}</h2>
+  <table id="fileTable">
+    {% if files %}
+      {% for f in files %}
+      <tr data-name="{{ f.name }}">
+        <td class="fname" title="{{ f.name }}">{{ f.name }}</td>
+        <td class="fmeta">{{ f.size }}</td>
+        <td class="fmeta">{{ f.mtime }}</td>
+        <td class="factions">
+          <a class="dl" href="/files/{{ f.name }}">get</a>
+          <button class="del" data-name="{{ f.name }}">del</button>
+        </td>
+      </tr>
+      {% endfor %}
+    {% else %}
+      <tr><td class="empty" colspan="4">Nothing uploaded yet.</td></tr>
+    {% endif %}
+  </table>
+</main>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const progressWrap = document.getElementById('progressWrap');
+const progressFill = document.getElementById('progressFill');
+const progressLabel = document.getElementById('progressLabel');
+const uploadError = document.getElementById('uploadError');
+
+dropzone.addEventListener('click', () => fileInput.click());
+
+['dragenter', 'dragover'].forEach(evt =>
+  dropzone.addEventListener(evt, e => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  })
+);
+['dragleave', 'drop'].forEach(evt =>
+  dropzone.addEventListener(evt, e => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+  })
+);
+dropzone.addEventListener('drop', e => {
+  if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) uploadFiles(fileInput.files);
+});
+
+function uploadFiles(fileList) {
+  const formData = new FormData();
+  for (const f of fileList) formData.append('file', f);
+
+  uploadError.style.display = 'none';
+  progressWrap.classList.add('active');
+  progressFill.style.width = '0%';
+  progressLabel.textContent = `uploading 0 / ${fileList.length} file${fileList.length > 1 ? 's' : ''}\u2026`;
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/upload');
+  xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+  xhr.upload.addEventListener('progress', e => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100);
+      progressFill.style.width = pct + '%';
+      progressLabel.textContent = `uploading\u2026 ${pct}%`;
+    }
+  });
+
+  xhr.onload = () => {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      progressLabel.textContent = 'done';
+      setTimeout(() => window.location.reload(), 300);
+    } else {
+      showError(`upload failed (${xhr.status})`);
+    }
+  };
+  xhr.onerror = () => showError('upload failed \u2014 connection error');
+  xhr.send(formData);
+}
+
+function showError(msg) {
+  progressWrap.classList.remove('active');
+  uploadError.textContent = msg;
+  uploadError.style.display = 'block';
+}
+
+document.querySelectorAll('button.del').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const name = btn.dataset.name;
+    if (!confirm(`Delete ${name}?`)) return;
+    fetch('/delete/' + encodeURIComponent(name), {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    }).then(r => {
+      if (r.ok) window.location.reload();
+    });
+  });
+});
+</script>
+</body>
+</html>
